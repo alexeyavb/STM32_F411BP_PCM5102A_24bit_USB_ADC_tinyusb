@@ -1,0 +1,135 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build DEBUG",
+            "type": "shell",
+            "command": "colormake",
+            "args": [
+                "BOARD=stm32f411blackpill",
+                "DEBUG=1","LOG=0","LOGGER=swo",
+                "all",
+                "-j14"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "build DEBUG, L3, LSWO",
+            "type": "shell",
+            "command": "colormake",
+            "args": [
+                "BOARD=stm32f411blackpill",
+                "DEBUG=1",
+                "LOG=3",
+                "LOGGER=swo",
+                "all",
+                "-j14"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "build DEBUG, L2, LSWO",
+            "type": "shell",
+            "command": "colormake",
+            "args": [
+                "BOARD=stm32f411blackpill",
+                "DEBUG=1",
+                "LOG=2",
+                "LOGGER=swo",
+                "all",
+                "-j14"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "build DEBUG, L1, LSWO",
+            "type": "shell",
+            "command": "colormake",
+            "args": [
+                "BOARD=stm32f411blackpill",
+                "DEBUG=1",
+                "LOG=1",
+                "LOGGER=swo",
+                "all",
+                "-j14"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "build RELEASE",
+            "type": "shell",
+            "command": "colormake",
+            "args": [
+                "BOARD=stm32f411blackpill",
+                "RELEASE=1",
+                "LOG=0",
+                "all",
+                "-j14"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "flash",
+            "type": "shell",
+            "command": "colormake",
+            "args": [
+                "BOARD=stm32f411blackpill",
+                "flash",
+                "-j16"
+            ],
+            "group": {
+                "kind": "none",
+                "isDefault": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "get deps",
+            "type": "shell",
+            "command": "colormake",
+            "args": [
+                "BOARD=stm32f411blackpill",
+                "get-deps"
+            ],
+            "group": {
+                "kind": "none",
+                "isDefault": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "colormake",
+            "args": [
+                "BOARD=stm32f411blackpill",
+                "clean"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },            
+            "problemMatcher": []
+        }
+    ]
+}

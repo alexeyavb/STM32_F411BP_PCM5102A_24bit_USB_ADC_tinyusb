@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Cortex Debug",
+            "cwd": "${workspaceRoot}",
+            "executable": "_build/stm32f411blackpill/20240313_UAC_Headset_test_001.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "stlink",
+            "runToEntryPoint": "main",
+            "preLaunchTask": "build DEBUG, L3, LSWO",
+            "device": "STM32F411CE",
+            "svdFile": "/opt/ST/STM32CubeCLT/STMicroelectronics_CMSIS_SVD/STM32F411.svd",
+            "configFiles": [],
+            "showDevDebugOutput": "raw" ,
+},
+    ]
+}

@@ -1,0 +1,69 @@
+{
+    "configurations": [
+        {
+            "name": "STM32",
+            "compilerPath": "/opt/ST/STM32CubeCLT/GNU-tools-for-STM32/bin/arm-none-eabi-gcc",
+            "includePath": [
+                "${workspaceFolder}/",
+                "${workspaceFolder}/src/",
+                "${workspaceFolder}/inc/",
+                "${workspaceFolder}/board/inc/",
+                "${workspaceFolder}/drivers/inc",
+                "${workspaceFolder}/../../../src/class/",
+                "${workspaceFolder}/../../../src/class/audio/",
+                "${workspaceFolder}/../../../src/class/cdc/",
+                "${workspaceFolder}/../../../src/common/",
+                "${workspaceFolder}/../../../src/device/",
+                "${workspaceFolder}/../../../src/osal/",
+                "${workspaceFolder}/../../../src/portable/st/stm32_fsdev/",
+                "${workspaceFolder}/../../../src/typec",
+                "${workspaceFolder}/../../../hw/",
+                "${workspaceFolder}/../../../hw/bsp/",
+                "${workspaceFolder}/../../../hw/bsp/stm32f4/",
+                "${workspaceFolder}/../../../hw/mcu/st/stm32f4xx_hal_driver/Inc/",
+                "${workspaceFolder}/../../../src/",
+                "${workspaceFolder}/../../../hw/mcu/st/cmsis_device_f4/Include",
+                "${workspaceFolder}/../../../lib/CMSIS_5/CMSIS/Core/Include"
+            ],
+            "defines": [
+                "STM32F411xE",
+                "USE_HAL_DRIVER",
+                "USE_MATH_FF",
+                "USE_USB_FS",
+                "USE_FULL_ASSERT",
+                "DEBUG=1",
+                "LOG=2",
+                "LOGGER=swo",
+                "BOARD=stm32f411blackpill"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-arm",
+            "mergeConfigurations": false,
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/",
+                    "${workspaceFolder}/src/",
+                    "${workspaceFolder}/drivers/",
+                    "${workspaceFolder}/board/",
+                    "${workspaceFolder}/../../../hw/bsp/stm32f4/",
+                    "${workspaceFolder}/../../../hw/bsp/stm32f4/FreeRTOSConfig/",
+                    "${workspaceFolder}/../../../hw/bsp/stm32f4/boards/stm32f411blackpill/",
+                    "${workspaceFolder}/../../../hw/mcu/st/cmsis_device_f4/",
+                    "${workspaceFolder}/../../../hw/mcu/st/cmsis_device_f4/Include/",
+                    "${workspaceFolder}/../../../hw/mcu/st/cmsis_device_f4/Source/Templates/",
+                    "${workspaceFolder}/../../../hw/mcu/st/cmsis_device_f4/Source/Templates/gcc/",
+                    "${workspaceFolder}/../../../hw/mcu/st/stm32f4xx_hal_driver/",
+                    "${workspaceFolder}/../../../hw/mcu/st/stm32f4xx_hal_driver/Inc/",
+                    "${workspaceFolder}/../../../hw/mcu/st/stm32f4xx_hal_driver/Inc/Legacy/",
+                    "${workspaceFolder}/../../../hw/mcu/st/stm32f4xx_hal_driver/Src/",
+                    "${workspaceFolder}/../../../hw/mcu/st/stm32f4xx_hal_driver/Src/Legacy/",
+                    "${workspaceFolder}/../../../lib/**",
+                    "${workspaceFolder}/../../../src/**"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ],
+    "version": 4
+}
