@@ -23,7 +23,11 @@
                 "${workspaceFolder}/../../../hw/mcu/st/stm32f4xx_hal_driver/Inc/",
                 "${workspaceFolder}/../../../src/",
                 "${workspaceFolder}/../../../hw/mcu/st/cmsis_device_f4/Include",
-                "${workspaceFolder}/../../../lib/CMSIS_5/CMSIS/Core/Include"
+                "${workspaceFolder}/../../../lib/CMSIS_5/CMSIS/Core/Include",
+                "${workspaceFolder}/lib/libresample/include/",
+                "${workspaceFolder}/lib/STM32_Audio/Addons/Common/Inc",
+                "${workspaceFolder}/lib/STM32_Audio/Addons/SRC236/Inc",
+                "${workspaceFolder}/lib/STM32_Audio/Addons/SRC441/Inc"
             ],
             "defines": [
                 "STM32F411xE",
@@ -58,6 +62,7 @@
                     "${workspaceFolder}/../../../hw/mcu/st/stm32f4xx_hal_driver/Inc/Legacy/",
                     "${workspaceFolder}/../../../hw/mcu/st/stm32f4xx_hal_driver/Src/",
                     "${workspaceFolder}/../../../hw/mcu/st/stm32f4xx_hal_driver/Src/Legacy/",
+                    "${workspaceFolder}/lib/libresample/src/",
                     "${workspaceFolder}/../../../lib/**",
                     "${workspaceFolder}/../../../src/**"
                 ],

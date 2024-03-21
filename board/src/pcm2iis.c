@@ -3,37 +3,14 @@
 #ifdef __cplusplus
 #extern "C"{
 #endif
-
-CFG_TUSB_MEM_ALIGN typedef  union UN32_ {
-        uint8_t b[4];
-        int32_t s;
-} UN32, *PUN32, *LPUN32;
-static uint16_t spk_buff_wr_ptr;
-
 bool lFlagPlayReady;
+static uint16_t spk_buff_wr_ptr;
+// result buffer for dac
+CFG_TUSB_MEM_ALIGN CFG_BOARD_MEM_SPK_SECTION uint16_t spk_audio_buffer_A[AUDIO_TOTAL_BUF_SIZE] = {0};
+CFG_TUSB_MEM_ALIGN CFG_BOARD_MEM_SPK_SECTION uint16_t spk_audio_buffer_B[AUDIO_TOTAL_BUF_SIZE] = {0}; //Double buffering
+//Temporary Data buffer for transmit to i2s dac
+static CFG_TUSB_MEM_ALIGN CFG_BOARD_MEM_SPK_SECTION uint8_t spk_tmpbuf[(AUDIO_TOTAL_BUF_SIZE)/3] = {0};
 
-CFG_TUSB_MEM_ALIGN uint16_t audio_buffer[AUDIO_TOTAL_BUF_SIZE];
-static CFG_TUSB_MEM_ALIGN uint8_t tmpbuf[(AUDIO_TOTAL_BUF_SIZE)/3];
-#ifdef __cplusplus
-}
-#endif
-// ref : https://www.microchip.com/forums/m932509.aspx    
-inline static int32_t USBD_AUDIO_Volume_Ctrl(int32_t sample, int32_t shift_3dB){
-    int32_t sample_atten = sample;
-    int32_t shift_6dB = shift_3dB>>1;
-
-    if (shift_3dB & 1) {
-        // shift_3dB is odd, implement 6dB shift and compensate
-        shift_6dB++;       
-        sample_atten >>= shift_6dB;
-        sample_atten += (sample_atten>>1);
-    }
-    else{
-        // shift_3dB is even, implement with 6dB shift
-        sample_atten >>= shift_6dB;
-    }
-    return sample_atten;
-}
 
 /**
  * @brief convert one 16bit pcm sample to 16bit i2s sample
@@ -55,24 +32,24 @@ uint16_t convert_3b_pcm24_i2s24(const void* src[], uint16_t dst[], uint16_t nByt
     (void)src;
     (void)dst;
     (void)nBytes;    
-    memcpy(tmpbuf, ((uint8_t*)src+0), nBytes);      // perfect bitrate!!!
+    memcpy(spk_tmpbuf, ((uint8_t*)src+0), nBytes);      // perfect bitrate!!!
     uint32_t tmpbuf_ptr = 0U;
     uint32_t num_samples = nBytes / 6; // 3bytes per sample
 
     for (uint32_t i = 0; i < num_samples; i++) {
         UN32 lsample; UN32 rsample;
-        lsample.b[0] = tmpbuf[tmpbuf_ptr]; // lsb
-        lsample.b[1] = tmpbuf[tmpbuf_ptr+1];
-        lsample.b[2] = tmpbuf[tmpbuf_ptr+2]; // msb
+        lsample.b[0] = spk_tmpbuf[tmpbuf_ptr]; // lsb
+        lsample.b[1] = spk_tmpbuf[tmpbuf_ptr+1];
+        lsample.b[2] = spk_tmpbuf[tmpbuf_ptr+2]; // msb
         lsample.b[3] = lsample.b[2] & 0x80 ? 0xFF : 0x00; // sign extend to 32bits
         lsample.s = USBD_AUDIO_Volume_Ctrl(lsample.s,USBD_AUDIO_VOL_DEFAULT);
 
         dst[spk_buff_wr_ptr++] = (((uint16_t)lsample.b[2]) << 8) | (uint16_t)lsample.b[1];
         dst[spk_buff_wr_ptr++] = ((uint16_t)lsample.b[0]) << 8;
 
-        rsample.b[0] = tmpbuf[tmpbuf_ptr+3]; // lsb
-        rsample.b[1] = tmpbuf[tmpbuf_ptr+4];
-        rsample.b[2] = tmpbuf[tmpbuf_ptr+5]; // msb
+        rsample.b[0] = spk_tmpbuf[tmpbuf_ptr+3]; // lsb
+        rsample.b[1] = spk_tmpbuf[tmpbuf_ptr+4];
+        rsample.b[2] = spk_tmpbuf[tmpbuf_ptr+5]; // msb
         rsample.b[3] = rsample.b[2] & 0x80 ? 0xFF : 0x00; // sign extend to 32bits
 
         rsample.s = USBD_AUDIO_Volume_Ctrl(rsample.s,USBD_AUDIO_VOL_DEFAULT);
@@ -87,20 +64,7 @@ uint16_t convert_3b_pcm24_i2s24(const void* src[], uint16_t dst[], uint16_t nByt
         };
     };
     return num_samples;
+} 
+#ifdef __cplusplus
 }
-    
-
-uint16_t convert_2b_pcm16b_i2s16(const void* src[], uint16_t dst[], uint16_t nBytes){
-    UNUSED(src);
-    UNUSED(dst);
-    UNUSED(nBytes);
-
-    return 0;
-}
-
-uint16_t convert_3b_pcm16b_i2s16(const void* src[], uint16_t dst[], uint16_t nBytes){
-    UNUSED(src);
-    UNUSED(dst);
-    UNUSED(nBytes);
-    return 0;
-}
+#endif

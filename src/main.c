@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  *
  */
-
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "main.h"
@@ -31,9 +31,23 @@
 #include "usb_descriptors.h"
 #include "i2s.h"
 #include "i2s_ex.h"
+#include "i2s_dma.h"
 #include "tim.h"
 #include "tim_ex.h"
 #include "pcm2iis.h"
+#include "iis2pcm.h"
+#include "memory.h"
+// #pragma message("set prerprtocessotr definition for library")
+#include "audio_fw_glo.h"
+#include "src236_glo.h"
+#include "src441_glo.h"
+
+
+/*
+* lresample include
+#include "libresample.h"
+*/
+
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTOTYPES
 //--------------------------------------------------------------------+
@@ -89,17 +103,16 @@ static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
 int8_t mute[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1];       // +1 for master channel 0
 int16_t volume[CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1];    // +1 for master channel 0
 
-// Buffer for microphone data
-int32_t CFG_TUD_MEM_ALIGN mic_buf[(CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ) / 4];
-// Buffer for speaker data
-
 #define SPK_BUFF_SIZE ((CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ)*1)
 // int32_t spk_buf[SPK_BUFF_SIZE];
-uint16_t CFG_TUD_MEM_ALIGN spk_buf[SPK_BUFF_SIZE];
+CFG_TUD_MEM_ALIGN CFG_BOARD_MEM_SPK_SECTION uint16_t spk_buf[SPK_BUFF_SIZE];
+// uint16_t CFG_TUD_MEM_ALIGN mic_buf[SPK_BUFF_SIZE];
 
 // Speaker data size received in the last frame
 int spk_data_size;
 uint16_t samples_rcvd;
+
+
 // Resolution per format
 // const uint8_t resolutions_per_format[CFG_TUD_AUDIO_FUNC_1_N_FORMATS] = {CFG_TUD_AUDIO_FUNC_1_FORMAT_1_RESOLUTION_RX,
 //                                                                         CFG_TUD_AUDIO_FUNC_1_FORMAT_2_RESOLUTION_RX,
@@ -111,8 +124,12 @@ const uint8_t resolutions_per_format[CFG_TUD_AUDIO_FUNC_1_N_FORMATS] = {CFG_TUD_
 uint8_t current_resolution;
 
 void led_blinking_task(void);
-void audio_task(void);
 
+void audio_task(void);
+extern void ST7735_FillRectangleFast(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
+
+// working with microphone
+static uint16_t FillMicrophoneBufferTask(void* pcm_buff, uint16_t mic_sz);
 /*------------- MAIN -------------*/
 int main(void)
 {
@@ -151,21 +168,45 @@ int main(void)
   extern void ST7735_FillScreen(uint16_t color);
   extern void InitTop(void);
 
+
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);SetPWM(0);
   ST7735_Init(); ST7735_FillScreen(0x0000);InitTop();SetPWM(11);
-  AUDIO_MUTE_OFF();
-  #if(CFG_TUD_AUDIO_ENABLE_DECODING)
-    HAL_I2S_Transmit_DMA(&hi2s2, (uint16_t*)(spk_buf), 192U);
-  #else
-    HAL_I2S_Transmit_DMA(&hi2s2, (uint16_t*)(audio_buffer), (AUDIO_TOTAL_BUF_SIZE)/2);
-  #endif // CFG_TUD_AUDIO_ENABLE_DECODING
+  tud_task(); // TinyUSB device task
   
-  // HAL_I2S_Transmit_DMA(&hi2s2, (uint16_t*)(spk_buf), ((CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ) * sizeof(uint32_t))/8);
 
+#if(CFG_TUD_AUDIO_ENABLE_EP_IN)   // Speaker
+  AUDIO_MUTE_OFF();
+  HAL_I2S_Transmit_DMA(&hi2s2, (uint16_t*)(spk_audio_buffer_A), (AUDIO_TOTAL_BUF_SIZE)/2);
+
+#endif //CFG_TUD_AUDIO_ENABLE_EP_IN
+
+#if(CFG_TUD_AUDIO_ENABLE_EP_IN)   // Mic
+    uint16_t mic_sz = returndmabuffersizeinsamples();
+    HAL_I2S_Receive_DMA(&hi2s3, mic_audio_buffer_IA, mic_sz);
+    UNUSED(mic_sz);
+#endif
+
+#define TUD_TASK_DELAY  1000  
+  //uint32_t counter = HAL_GetTick();
   while (1)
-  {    
-    tud_task(); // TinyUSB device task
+  { 
+    // if((counter++) > TUD_TASK_DELAY){
+    //   counter = 0;
+      tud_task(); // TinyUSB device task
+    // }    
     audio_task();
+
+    if(lMicRcvHalfFlag){
+      tud_audio_write((void*)&mic_tmpbuf_MA,returntmpbuffsizeinbytes());
+      lMicRcvHalfFlag = false;
+    }
+
+    if(lMicRcvCompFlag){
+      tud_audio_write((void*)&mic_tmpbuf_MB,returntmpbuffsizeinbytes());
+      lMicRcvCompFlag = false;
+    }
+
+
     led_blinking_task();
   }
 }
@@ -412,7 +453,7 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const * p_reque
   return true;
 }
 
-#if(CFG_TUD_AUDIO_ENABLE_EP_OUT)
+#if(CFG_TUD_AUDIO_ENABLE_EP_IN) // Speaker
 bool tud_audio_rx_done_pre_read_cb(uint8_t rhport, uint16_t n_bytes_received, uint8_t func_id, uint8_t ep_out, uint8_t cur_alt_setting)
 {
   (void)rhport;
@@ -420,18 +461,12 @@ bool tud_audio_rx_done_pre_read_cb(uint8_t rhport, uint16_t n_bytes_received, ui
   (void)func_id;
   (void)ep_out;
   (void)cur_alt_setting;
-#if(CFG_TUD_AUDIO_ENABLE_DECODING)
-  spk_data_size = tud_audio_n_read_support_ff(func_id, 0, spk_buf, n_bytes_received);
-#else
   spk_data_size = tud_audio_read(spk_buf, n_bytes_received);
-  samples_rcvd = convert_3b_pcm24_i2s24((void*) spk_buf, audio_buffer, n_bytes_received);
+  samples_rcvd = convert_3b_pcm24_i2s24((void*) spk_buf, spk_audio_buffer_A, n_bytes_received);
   if(lFlagPlayReady){
-    HAL_I2S_Transmit_DMA(&hi2s2, (uint16_t*)audio_buffer, samples_rcvd);
+    HAL_I2S_Transmit_DMA(&hi2s2, (uint16_t*)spk_audio_buffer_A, samples_rcvd);
     lFlagPlayReady = false;
   }
-#endif
-
-
   return true;
 }
 
@@ -445,15 +480,16 @@ bool tud_audio_rx_done_post_read_cb(uint8_t rhport, uint16_t n_bytes_received, u
 }
 #endif
 
-
-#if(CFG_TUD_AUDIO_ENABLE_EP_IN)
+#if(CFG_TUD_AUDIO_ENABLE_EP_OUT) // Mic
+// static CFG_TUSB_MEM_ALIGN CFG_BOARD_MEM_MIC_CONVERTER_SECTION uint8_t __mic_cnv_buff[MIC_TOTAL_DMA_BUF_SIZE];
 bool tud_audio_tx_done_pre_load_cb(uint8_t rhport, uint8_t itf, uint8_t ep_in, uint8_t cur_alt_setting){
-  (void)rhport;
-  (void)itf;
-  (void)ep_in;
-  (void)cur_alt_setting;
-
-  // This callback could be used to fill microphone data separately
+  {
+    (void)rhport;
+    (void)itf;
+    (void)ep_in;
+    (void)cur_alt_setting;  
+  }
+  HAL_I2S_Receive_DMA(&hi2s2, mic_audio_buffer_IA, MIC_TOTAL_DMA_BUF_SIZE);
   return true;
 }
 
@@ -463,7 +499,7 @@ bool tud_audio_tx_done_post_load_cb(uint8_t rhport, uint16_t n_bytes_copied, uin
   (void)func_id;
   (void)ep_in;
   (void)cur_alt_setting;
-  // This callback could be used to fill microphone data separately
+
   return true;
 }
 #endif
@@ -503,48 +539,20 @@ bool tud_audio_int_ctr_done_cb(uint8_t rhport, uint16_t n_bytes_copied){
 // AUDIO Task
 //--------------------------------------------------------------------+
 
+#define MIC_SAMPLES_INTERVAL 1000U
+static uint16_t mic_samples_rcvd;
+static bool lcur;
 void audio_task(void)
-{
-  return;
-  // When new data arrived, copy data from speaker buffer, to microphone buffer
-  // and send it over
-  // Only support speaker & headphone both have the same resolution
-  // If one is 16bit another is 24bit be care of LOUD noise !
-  /*
-  if (spk_data_size)
-  {
-    if (current_resolution == 16)
-    {
-      int16_t *src = (int16_t*)spk_buf;
-      int16_t *limit = (int16_t*)spk_buf + spk_data_size / 2;
-      int16_t *dst = (int16_t*)mic_buf;
-      while (src < limit)
-      {
-        // Combine two channels into one
-        int32_t left = *src++;
-        int32_t right = *src++;
-        *dst++ = (int16_t) ((left >> 1) + (right >> 1));
-      }
-      // tud_audio_write((uint8_t *)mic_buf, (uint16_t) (spk_data_size / 2));
-      spk_data_size = 0;
+{    
+  if(lMicRcvCompFlag){
+    if(mic_samples_rcvd >= MIC_SAMPLES_INTERVAL){
+      mic_samples_rcvd = 0;
+      lcur = !lcur;
+      ST7735_FillRectangleFast(00,20,10,10,(lcur) ? 0xF0A1 : 0x000F);
     }
-    else if (current_resolution == 24)
-    {
-      int32_t *src = spk_buf;
-      int32_t *limit = spk_buf + spk_data_size / 4;
-      int32_t *dst = mic_buf;
-      while (src < limit)
-      {
-        // Combine two channels into one
-        int32_t left = *src++;
-        int32_t right = *src++;
-        *dst++ = (int32_t) ((uint32_t) ((left >> 1) + (right >> 1)) & 0xffffff00ul);
-      }
-      // tud_audio_write((uint8_t *)(mic_buf), (uint16_t) (spk_data_size / 2));
-      spk_data_size = 0;
-    }    
+    mic_samples_rcvd++;
   }
-  */
+return;
 }
 
 //--------------------------------------------------------------------+
@@ -562,3 +570,60 @@ void led_blinking_task(void)
   board_led_write(led_state);
   led_state = 1 - led_state;
 }
+
+//--------------------------------------------------------------------+
+// extend buffers to .tmp memory section
+
+
+//--------------------------------------------------------------------+
+// HALF DMA BUFFER Callback
+void user_spi3rx_halfcplt_callback_method(I2S_HandleTypeDef *hi2s){
+  uint32_t resampletaskticks = HAL_GetTick();
+  // if(!lMicRcvHalfFlag){      
+    {
+      uint16_t bytesconverted = 0u;
+      uint16_t common_position = 0u;
+      uint16_t halfbufferSz = (returndmabuffersizeinsamples())/2;
+      uint16_t dstBufferSz = (returntmpbuffsizeinsamples());
+      bytesconverted = convert_3b_i2s24_PCM24(mic_audio_buffer_IA, common_position, halfbufferSz, mic_tmpbuf_MA, common_position, dstBufferSz);
+      lMicRcvHalfFlag  = true;    
+      UNUSED(bytesconverted);
+    }
+  resampletaskticks = HAL_GetTick()-resampletaskticks;    
+  UNUSED(hi2s);
+  UNUSED(resampletaskticks);
+  return;
+}
+//--------------------------------------------------------------------+
+// FULL DMA BUFFER Callback
+
+void user_spi3rx_cplt_callback_method(I2S_HandleTypeDef *hi2s){
+  uint32_t resampletaskticks = HAL_GetTick();
+  // if(!lMicRcvCompFlag){
+  {
+    uint16_t bytesconverted = 0u;
+    uint16_t common_position = (returndmabuffersizeinsamples())/2;
+    uint16_t bufferSz = (returndmabuffersizeinsamples());
+    uint16_t dstBufferSz = (returntmpbuffsizeinsamples());    
+    bytesconverted = convert_3b_i2s24_PCM24(mic_audio_buffer_IA, common_position, bufferSz, mic_tmpbuf_MB, 0, dstBufferSz);
+    lMicRcvCompFlag = true;   
+    UNUSED(bytesconverted); 
+  }
+  resampletaskticks = HAL_GetTick()-resampletaskticks;    
+  UNUSED(hi2s);
+  UNUSED(resampletaskticks);
+  return;
+}
+
+
+static inline uint16_t FillMicrophoneBufferTask(void* pcm_buff, uint16_t mic_sz){
+  uint16_t stat = tud_audio_write(pcm_buff, mic_sz);
+
+  if(!(stat == 0))
+    return -1;
+
+  UNUSED(pcm_buff);
+  UNUSED(mic_sz);
+  return stat;
+}
+

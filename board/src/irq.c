@@ -214,8 +214,9 @@ void RCC_IRQHandler(void)
 void DMA1_Stream2_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream2_IRQn 0 */
-
+  
   /* USER CODE END DMA1_Stream2_IRQn 0 */
+      
   HAL_DMA_IRQHandler(&hdma_spi3_rx);
   /* USER CODE BEGIN DMA1_Stream2_IRQn 1 */
 
@@ -268,10 +269,17 @@ void SPI2_IRQHandler(void)
 /**
   * @brief This function handles SPI3 global interrupt.
   */
+// static uint16_t mic_buffer[USB_OTG_FS_TOTAL_FIFO_SIZE];
+static uint16_t rd_pointer;
+
 void SPI3_IRQHandler(void)
 {
   /* USER CODE BEGIN SPI3_IRQn 0 */
-
+  rd_pointer++;
+  // HAL_I2S_Receive_IT(&hi2s3, (uint16_t*)mic_buffer+(rd_pointer), (USB_OTG_FS_TOTAL_FIFO_SIZE)-rd_pointer);
+  // if(rd_pointer >= USB_OTG_FS_TOTAL_FIFO_SIZE){
+  //   rd_pointer = 0U;
+  // }  
   /* USER CODE END SPI3_IRQn 0 */
   HAL_I2S_IRQHandler(&hi2s3);
   /* USER CODE BEGIN SPI3_IRQn 1 */
@@ -312,11 +320,13 @@ void DMA2_Stream4_IRQHandler(void)
 /**
   * @brief This function handles FPU global interrupt.
   */
+
 void FPU_IRQHandler(void)
 {
   /* USER CODE BEGIN FPU_IRQn 0 */
 
   /* USER CODE END FPU_IRQn 0 */
+
   /* USER CODE BEGIN FPU_IRQn 1 */
 
   /* USER CODE END FPU_IRQn 1 */

@@ -146,7 +146,6 @@ void I2S_BUS_ClockConfig(I2S_HandleTypeDef *hi2s, uint32_t AudioFreq, void *Para
   }
   UNUSED(Params);
 }
-
 /*
 Direct buffer moving
 void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s) {  

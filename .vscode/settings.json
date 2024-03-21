@@ -4,6 +4,10 @@
         "*.c": "c",
         "*.c.dis": "c",
         "*.h.dis": "c",
+        "*.tcc": "c",
+        "cstdlib": "c",
+        "memory": "c"
     },
-    "cmake.configureOnOpen": false
+    "cmake.configureOnOpen": false,
+    "cortex-debug.variableUseNaturalFormat": true
 }

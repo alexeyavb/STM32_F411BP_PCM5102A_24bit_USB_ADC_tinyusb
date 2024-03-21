@@ -79,13 +79,26 @@ extern "C" {
  * - CFG_TUSB_MEM SECTION : __attribute__ (( section(".usb_ram") ))
  * - CFG_TUSB_MEM_ALIGN   : __attribute__ ((aligned(4)))
  */
-#ifndef CFG_TUSB_MEM_SECTION
-#define CFG_TUSB_MEM_SECTION
-#endif
-
 #ifndef CFG_TUSB_MEM_ALIGN
 #define CFG_TUSB_MEM_ALIGN        __attribute__ ((aligned(4)))
 #endif
+
+#ifndef CFG_TUSB_MEM_SECTION
+#define CFG_TUSB_MEM_SECTION     __attribute__ (( section(".usb_ram") ))
+#endif
+
+#ifndef CFG_BOARD_MEM_SPK_SECTION
+#define CFG_BOARD_MEM_SPK_SECTION __attribute__ (( section(".spk_buff") ))
+#endif
+
+#ifndef CFG_BOARD_MEM_MIC_SECTION
+#define CFG_BOARD_MEM_MIC_SECTION __attribute__ (( section(".mic_buff") ))
+#endif
+
+#ifndef CFG_BOARD_MEM_MIC_CONVERTER_SECTION
+#define CFG_BOARD_MEM_MIC_CONVERTER_SECTION __attribute__ (( section(".mic_conv_buff") ))
+#endif
+
 
 //--------------------------------------------------------------------
 // DEVICE CONFIGURATION
@@ -201,7 +214,7 @@ extern "C" {
 #define CFG_TUD_AUDIO_ENABLE_ENCODING                 0
 #define CFG_TUD_AUDIO_ENABLE_DECODING                 0
 
-#define USE_LINREAR_BUFFER  1 
+#define USE_LINREAR_BUFFER  0 
 
 #if(CFG_TUD_AUDIO_ENABLE_ENCODING)
 #define CFG_TUD_AUDIO_ENABLE_TYPE_I_ENCODING          1
@@ -209,10 +222,13 @@ extern "C" {
 #define CFG_TUD_AUDIO_FUNC_1_N_TX_SUPP_SW_FIFO        1
 #define CFG_TUD_AUDIO_FUNC_1_TX_SUPP_SW_FIFO_SZ        ((BOARD_TUD_MAX_SPEED == OPT_MODE_HIGH_SPEED ? 32 : 4) * (CFG_TUD_AUDIO_FUNC_1_FORMAT_1_EP_SZ_OUT / CFG_TUD_AUDIO_FUNC_1_N_TX_SUPP_SW_FIFO))
 #else
+#endif
+/*
 #if(USE_LINREAR_BUFFER)
 #define USE_LINREAR_BUFFER_TX 1
 #endif
 #endif
+*/
 
 #if(CFG_TUD_AUDIO_ENABLE_DECODING)
 #define CFG_TUD_AUDIO_ENABLE_TYPE_I_DECODING          1
